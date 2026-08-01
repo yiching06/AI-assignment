@@ -1,4 +1,3 @@
 *.csv
-*.tsv
 .venv/
 __pycache__/
