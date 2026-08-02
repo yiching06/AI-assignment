@@ -13,17 +13,13 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import make_pipeline
 from sklearn.svm import SVC
 
 
 warnings.filterwarnings("ignore")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATASET_PATH = PROJECT_ROOT / "data" / "restaurant_reviews.tsv"
 NLTK_DATA_DIR = PROJECT_ROOT / "nltk_data"
 KAGGLE_DATASET = "joebeachcapital/restaurant-reviews"
 
@@ -53,37 +49,6 @@ def ensure_nltk_data():
         if not resource_exists:
             print(f"Downloading NLTK package: {package}")
             nltk.download(package, download_dir=str(NLTK_DATA_DIR), quiet=True)
-
-
-def run_basic_demo():
-    print("\nBASIC NAIVE BAYES DEMO")
-    print("-" * 30)
-
-    demo_data = {
-        "review": [
-            "The food was absolutely amazing and the service was great.",
-            "Terrible experience. The soup was cold and the waiter was rude.",
-            "I loved the pasta, it tasted very authentic.",
-            "Worst meal of my life. Will never go back.",
-        ],
-        "sentiment": ["positive", "negative", "positive", "negative"],
-    }
-
-    demo_df = pd.DataFrame(demo_data)
-    stop_words_list = stopwords.words("english")
-    model = make_pipeline(
-        TfidfVectorizer(stop_words=stop_words_list),
-        MultinomialNB(),
-    )
-
-    model.fit(demo_df["review"], demo_df["sentiment"])
-
-    test_review = ["The waiter was awful but the food was okay."]
-    prediction = model.predict(test_review)
-
-    print(demo_df)
-    print(f"\nReview: {test_review[0]}")
-    print(f"Predicted Sentiment: {prediction[0].upper()}")
 
 
 def build_stop_words():
@@ -193,16 +158,9 @@ def read_reviews_dataset(dataset_path):
     return df.dropna(subset=["Review", "Liked"])
 
 
-def load_and_clean_dataset(dataset_path=None, use_kaggle=False):
-    if use_kaggle:
-        dataset_dir = download_kaggle_dataset()
-        dataset_path = find_dataset_file(dataset_dir)
-    else:
-        dataset_path = Path(dataset_path) if dataset_path else DATASET_PATH
-
-    if not Path(dataset_path).exists():
-        raise FileNotFoundError(f"Dataset not found: {dataset_path}")
-
+def load_and_clean_dataset():
+    dataset_dir = download_kaggle_dataset()
+    dataset_path = find_dataset_file(dataset_dir)
     df = read_reviews_dataset(dataset_path)
 
     lemmatizer = WordNetLemmatizer()
@@ -214,7 +172,7 @@ def load_and_clean_dataset(dataset_path=None, use_kaggle=False):
     return df, lemmatizer, stop_words
 
 
-def train_sentiment_model(df, verbose=True):
+def train_sentiment_model(df):
     vectorizer = TfidfVectorizer(max_features=2500)
     features = vectorizer.fit_transform(df["cleaned_review"]).toarray()
     labels = df["Liked"]
@@ -226,45 +184,8 @@ def train_sentiment_model(df, verbose=True):
         random_state=42,
     )
 
-    if verbose:
-        print("\nDATASET MODEL")
-        print("-" * 30)
-        print(f"Features shape: {features.shape}")
-        print(f"Labels shape: {labels.shape}")
-        print(f"Training data shape: {x_train.shape}")
-        print(f"Testing data shape: {x_test.shape}")
-
     svm_model = SVC(kernel="linear", random_state=42)
-
-    if verbose:
-        print("\nTraining the SVM model...")
     svm_model.fit(x_train, y_train)
-
-    if verbose:
-        print("Testing the model...")
-    predictions = svm_model.predict(x_test)
-    accuracy = accuracy_score(y_test, predictions)
-
-    if verbose:
-        print("-" * 30)
-        print(f"Final Accuracy: {accuracy * 100:.2f}%\n")
-        print("Detailed Classification Report:")
-        print(classification_report(y_test, predictions))
-
-        results_df = pd.DataFrame(
-            {
-                "Review": df.loc[y_test.index, "Review"],
-                "Actual_Sentiment": y_test.values,
-                "Predicted_Sentiment": predictions,
-            }
-        )
-
-        label_map = {1: "Positive", 0: "Negative"}
-        results_df["Actual_Sentiment"] = results_df["Actual_Sentiment"].map(label_map)
-        results_df["Predicted_Sentiment"] = results_df["Predicted_Sentiment"].map(label_map)
-
-        print("Sample Predictions:")
-        print(results_df.head(10).to_string(index=False))
 
     return svm_model, vectorizer
 
@@ -281,64 +202,20 @@ def predict_sentiment(custom_review, svm_model, vectorizer, lemmatizer, stop_wor
     return label, cleaned_text
 
 
-def test_my_ai(custom_review, svm_model, vectorizer, lemmatizer, stop_words):
-    print("\n" + "=" * 55)
-    print("LIVE SENTIMENT ANALYSIS SYSTEM")
-    print("=" * 55)
-
-    if not custom_review or custom_review.strip() == "":
-        print("VALIDATION ERROR: Input cannot be empty.")
-        print("Please provide a valid text review to analyze.")
-        print("=" * 55)
-        return
-
-    try:
-        label, _ = predict_sentiment(
-            custom_review,
-            svm_model,
-            vectorizer,
-            lemmatizer,
-            stop_words,
-        )
-
-        print(f'Target Text  : "{custom_review}"')
-        if label == "Positive":
-            print("Prediction   : POSITIVE")
-        else:
-            print("Prediction   : NEGATIVE")
-    except Exception as error:
-        print(f"SYSTEM ERROR: An unexpected fault occurred: {error}")
-
-    print("=" * 55)
-
-
 def main():
     ensure_nltk_data()
-    print("Libraries and NLTK data loaded successfully.")
-
-    run_basic_demo()
-
     df, lemmatizer, stop_words = load_and_clean_dataset()
-    print("\nCleaned Review Examples:")
-    print(df[["Review", "cleaned_review"]].head().to_string(index=False))
-
     svm_model, vectorizer = train_sentiment_model(df)
-
-    test_my_ai(
+    label, cleaned_text = predict_sentiment(
         "The food was absolutely delicious and the service was amazing!",
         svm_model,
         vectorizer,
         lemmatizer,
         stop_words,
     )
-    test_my_ai(
-        "I waited an hour for my meal and it was completely cold. Never coming back.",
-        svm_model,
-        vectorizer,
-        lemmatizer,
-        stop_words,
-    )
-    test_my_ai("    ", svm_model, vectorizer, lemmatizer, stop_words)
+    print(f"Dataset rows: {len(df)}")
+    print(f"Prediction: {label}")
+    print(f"Cleaned text: {cleaned_text}")
 
 
 if __name__ == "__main__":
