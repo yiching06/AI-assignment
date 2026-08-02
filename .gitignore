@@ -1,3 +1,6 @@
 *.csv
 .venv/
+nltk_data/
 __pycache__/
+logs/
+*.log
