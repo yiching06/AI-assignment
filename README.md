@@ -1,6 +1,6 @@
 # Restaurant Review Sentiment Analysis
 
-This project is now a Streamlit app that uses KaggleHub to download the restaurant reviews dataset, trains an SVM sentiment model, and lets you test custom restaurant reviews.
+This project is a Streamlit app that uses KaggleHub to download the restaurant reviews dataset, trains an SVM sentiment model, and lets you test custom restaurant reviews.
 
 ## Project Structure
 
@@ -34,7 +34,7 @@ You can also run it with:
 
 ## KaggleHub Dataset
 
-The app uses this dataset:
+The app downloads this dataset with KaggleHub:
 
 ```python
 import kagglehub

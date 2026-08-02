@@ -1,5 +1,6 @@
 *.csv
 .venv/
+.agents/
 nltk_data/
 __pycache__/
 logs/
