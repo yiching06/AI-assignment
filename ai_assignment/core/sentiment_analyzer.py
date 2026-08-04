@@ -13,7 +13,10 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import SVC
 
 
@@ -22,6 +25,8 @@ warnings.filterwarnings("ignore")
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 NLTK_DATA_DIR = PROJECT_ROOT / "nltk_data"
 KAGGLE_DATASET = "joebeachcapital/restaurant-reviews"
+SENTIMENT_LABELS = ["Negative", "Neutral", "Positive"]
+MODEL_NAMES = ["SVM", "Naive Bayes", "Logistic Regression"]
 
 nltk.data.path.insert(0, str(NLTK_DATA_DIR))
 
@@ -147,15 +152,27 @@ def read_reviews_dataset(dataset_path):
     if "Review" not in df.columns:
         raise ValueError("Dataset must contain a 'Review' column.")
 
-    if "Liked" not in df.columns:
-        if "Rating" not in df.columns:
-            raise ValueError("Dataset must contain either 'Liked' or 'Rating'.")
-
+    if "Rating" in df.columns:
         ratings = pd.to_numeric(df["Rating"], errors="coerce")
-        df = df.assign(Liked=ratings.where(ratings.isna(), (ratings >= 4).astype(int)))
-        df = df[ratings.le(2) | ratings.ge(4)]
+        df = df.assign(Sentiment=ratings.apply(rating_to_sentiment))
+    elif "Liked" in df.columns:
+        df = df.assign(
+            Sentiment=df["Liked"].map({0: "Negative", 1: "Positive"})
+        )
+    else:
+        raise ValueError("Dataset must contain either 'Rating' or 'Liked'.")
 
-    return df.dropna(subset=["Review", "Liked"])
+    return df.dropna(subset=["Review", "Sentiment"])
+
+
+def rating_to_sentiment(rating):
+    if pd.isna(rating):
+        return None
+    if rating < 2.5:
+        return "Negative"
+    if rating < 4:
+        return "Neutral"
+    return "Positive"
 
 
 def load_and_clean_dataset():
@@ -172,32 +189,90 @@ def load_and_clean_dataset():
     return df, lemmatizer, stop_words
 
 
-def train_sentiment_model(df):
+def build_sentiment_models():
+    return {
+        "SVM": SVC(kernel="linear", random_state=42),
+        "Naive Bayes": MultinomialNB(),
+        "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
+    }
+
+
+def train_sentiment_models(df):
     vectorizer = TfidfVectorizer(max_features=2500)
-    features = vectorizer.fit_transform(df["cleaned_review"]).toarray()
-    labels = df["Liked"]
+    features = vectorizer.fit_transform(df["cleaned_review"])
+    labels = df["Sentiment"]
 
     x_train, x_test, y_train, y_test = train_test_split(
         features,
         labels,
         test_size=0.20,
         random_state=42,
+        stratify=labels,
     )
 
-    svm_model = SVC(kernel="linear", random_state=42)
-    svm_model.fit(x_train, y_train)
+    trained_models = {}
+    metrics_rows = []
 
-    return svm_model, vectorizer
+    for model_name, model in build_sentiment_models().items():
+        model.fit(x_train, y_train)
+        predictions = model.predict(x_test)
+        trained_models[model_name] = model
+        metrics_rows.append(
+            {
+                "Model": model_name,
+                **calculate_classification_metrics(y_test, predictions),
+            }
+        )
+
+    metrics_df = pd.DataFrame(metrics_rows)
+
+    return trained_models, vectorizer, metrics_df
 
 
-def predict_sentiment(custom_review, svm_model, vectorizer, lemmatizer, stop_words):
+def train_sentiment_model(df):
+    trained_models, vectorizer, metrics_df = train_sentiment_models(df)
+    svm_metrics = (
+        metrics_df.loc[metrics_df["Model"] == "SVM"]
+        .drop(columns="Model")
+        .iloc[0]
+        .to_dict()
+    )
+
+    return trained_models["SVM"], vectorizer, svm_metrics
+
+
+def calculate_classification_metrics(y_test, predictions):
+    return {
+        "Accuracy": accuracy_score(y_test, predictions),
+        "Precision": precision_score(
+            y_test,
+            predictions,
+            average="weighted",
+            zero_division=0,
+        ),
+        "Recall": recall_score(
+            y_test,
+            predictions,
+            average="weighted",
+            zero_division=0,
+        ),
+        "F1 Score": f1_score(
+            y_test,
+            predictions,
+            average="weighted",
+            zero_division=0,
+        ),
+    }
+
+
+def predict_sentiment(custom_review, model, vectorizer, lemmatizer, stop_words):
     if not custom_review or custom_review.strip() == "":
         raise ValueError("Input cannot be empty.")
 
     cleaned_text = clean_review(custom_review, lemmatizer, stop_words)
-    vectorized_text = vectorizer.transform([cleaned_text]).toarray()
-    prediction = svm_model.predict(vectorized_text)[0]
-    label = "Positive" if prediction == 1 else "Negative"
+    vectorized_text = vectorizer.transform([cleaned_text])
+    prediction = model.predict(vectorized_text)[0]
+    label = str(prediction)
 
     return label, cleaned_text
 
@@ -205,15 +280,19 @@ def predict_sentiment(custom_review, svm_model, vectorizer, lemmatizer, stop_wor
 def main():
     ensure_nltk_data()
     df, lemmatizer, stop_words = load_and_clean_dataset()
-    svm_model, vectorizer = train_sentiment_model(df)
+    trained_models, vectorizer, metrics_df = train_sentiment_models(df)
+    best_model_name = metrics_df.loc[metrics_df["Accuracy"].idxmax(), "Model"]
     label, cleaned_text = predict_sentiment(
         "The food was absolutely delicious and the service was amazing!",
-        svm_model,
+        trained_models[best_model_name],
         vectorizer,
         lemmatizer,
         stop_words,
     )
     print(f"Dataset rows: {len(df)}")
+    print("Model comparison:")
+    print(metrics_df.to_string(index=False))
+    print(f"Best model by accuracy: {best_model_name}")
     print(f"Prediction: {label}")
     print(f"Cleaned text: {cleaned_text}")
 
