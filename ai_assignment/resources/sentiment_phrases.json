@@ -1,0 +1,40 @@
+{
+  "positive_phrases": [
+    "not too crowded",
+    "not crowded"
+  ],
+  "positive_cue_word_overrides": [
+    "tasty"
+  ],
+  "negative_cue_word_overrides": [
+    "complaints",
+    "forgettable"
+  ],
+  "negative_cue_phrases": [
+    "not memorable",
+    "not very memorable",
+    "not impressed",
+    "not much interaction",
+    "wasn t much interaction",
+    "wasnt much interaction",
+    "wasn t many interaction",
+    "wasnt many interaction",
+    "nothing impressed",
+    "nothing particularly impressed",
+    "consider other restaurants",
+    "other restaurants nearby",
+    "room for improvement"
+  ],
+  "neutral_phrases": [
+    "met my expectation",
+    "met my expectations",
+    "meets my expectation",
+    "meets my expectations",
+    "nothing special",
+    "nothing remarkable",
+    "ordinary dining experience",
+    "not bad not great",
+    "not good not bad",
+    "so so"
+  ]
+}

@@ -2,6 +2,7 @@
 .venv/
 .agents/
 nltk_data/
+data/external/
 __pycache__/
 logs/
 *.log

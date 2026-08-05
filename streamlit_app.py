@@ -2,7 +2,8 @@ import pandas as pd
 import streamlit as st
 
 from ai_assignment.core.sentiment_analyzer import (
-    KAGGLE_DATASET,
+    EXTERNAL_DATASETS,
+    KAGGLE_DATASETS,
     SENTIMENT_LABELS,
     ensure_nltk_data,
     load_and_clean_dataset,
@@ -27,9 +28,16 @@ def load_models():
 
 st.title("Restaurant Review Sentiment Tester")
 st.write(
-    "Train TF-IDF based NLP models from the KaggleHub restaurant reviews dataset."
+    "Train TF-IDF based NLP models from SemEval, restaurant reviews, and Yelp data."
 )
-st.caption(f"KaggleHub dataset: `{KAGGLE_DATASET}`")
+st.caption(
+    "KaggleHub datasets: "
+    + ", ".join(f"`{dataset_id}`" for dataset_id in KAGGLE_DATASETS.values())
+)
+st.caption(
+    "Yelp datasets: "
+    + ", ".join(f"`{dataset_name}`" for dataset_name in EXTERNAL_DATASETS)
+)
 
 try:
     with st.spinner("Downloading dataset and training NLP models..."):
@@ -61,7 +69,7 @@ with customer_tab:
 
     if submitted:
         try:
-            label, cleaned_text = predict_sentiment(
+            label, score, cleaned_text = predict_sentiment(
                 review,
                 trained_models[selected_model_name],
                 vectorizer,
@@ -81,6 +89,7 @@ with customer_tab:
                 st.success("Prediction: Positive")
 
             st.caption(f"Model used: `{selected_model_name}`")
+            st.caption(f"Sentiment score: `{score}`")
             st.caption(f"Cleaned text: `{cleaned_text}`")
 
 with owner_tab:
@@ -95,6 +104,7 @@ with owner_tab:
             border=True,
         )
         st.metric("NLP models", len(trained_models), border=True)
+        st.metric("Datasets", df["DatasetSource"].nunique(), border=True)
         st.metric(
             "Best accuracy",
             best_model_row["Model"],
@@ -119,6 +129,17 @@ with owner_tab:
             horizontal=True,
         )
 
+    source_counts = (
+        df["DatasetSource"]
+        .value_counts()
+        .rename_axis("Dataset")
+        .reset_index(name="Reviews")
+    )
+
+    with st.container(border=True):
+        st.subheader("Dataset source distribution")
+        st.bar_chart(source_counts, x="Dataset", y="Reviews", horizontal=True)
+
     metric_columns = ["Accuracy", "Precision", "Recall", "F1 Score"]
     metrics_display = metrics_df.copy()
     metrics_display[metric_columns] = (
@@ -130,7 +151,7 @@ with owner_tab:
     with st.container(border=True):
         st.subheader("Model evaluation comparison")
         st.write(
-            "Compare SVM, Naive Bayes, and Logistic Regression using weighted "
+            "Compare SVM, Decision Tree, and Logistic Regression using weighted "
             "Accuracy, Precision, Recall, and F1 Score."
         )
         st.bar_chart(
@@ -142,4 +163,18 @@ with owner_tab:
         st.dataframe(metrics_display)
 
     with st.expander("Preview cleaned dataset"):
-        st.dataframe(df[["Review", "Rating", "Sentiment", "cleaned_review"]].head(10))
+        preview_columns = [
+            column
+            for column in [
+                "Review",
+                "Sentiment",
+                "SentimentScore",
+                "DatasetSource",
+                "AspectPolarities",
+                "SourceFile",
+                "Rating",
+                "cleaned_review",
+            ]
+            if column in df.columns
+        ]
+        st.dataframe(df[preview_columns].head(10))
