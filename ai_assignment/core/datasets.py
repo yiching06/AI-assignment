@@ -312,7 +312,7 @@ def load_external_dataset(dataset_name, dataset_url):
     return df.assign(DatasetSource=dataset_name)
 
 
-def load_combined_dataset():
+def load_combined_dataset(): #combine 3 datasets into 1 central dataset
     dataframes = []
     for dataset_name, dataset_id in KAGGLE_DATASETS.items():
         dataframes.append(load_dataset(dataset_name, dataset_id))

@@ -62,12 +62,16 @@ with customer_tab:
         )
         review = st.text_area(
             "Enter a restaurant review",
-            value="The food was absolutely delicious and the service was amazing!",
+            placeholder="Example: The food was absolutely delicious and the service was amazing!",
             height=140,
         )
         submitted = st.form_submit_button("Predict sentiment", type="primary")
 
     if submitted:
+        if not review.strip(): #using strip() to check
+            st.error("Please enter a review before continuing.") #if the customer submit an empty review, display an error message
+            st.stop()
+
         try:
             label, score, cleaned_text = predict_sentiment(
                 review,
@@ -77,7 +81,7 @@ with customer_tab:
                 stop_words,
             )
         except ValueError:
-            st.warning("Please enter a review first.")
+            st.error("Please enter a review before continuing.")
         except Exception as error:
             st.error(f"Prediction failed: {error}")
         else:
@@ -96,15 +100,26 @@ with owner_tab:
     st.subheader("Restaurant owner dashboard")
     best_model_row = metrics_df.loc[metrics_df["Accuracy"].idxmax()]
 
+    selected_sentiment = st.segmented_control(
+        "Filter reviews by classified sentiment",
+        options=["All", *SENTIMENT_LABELS],
+        default="All",
+    )
+    filtered_df = (
+        df
+        if selected_sentiment == "All"
+        else df[df["Sentiment"] == selected_sentiment]
+    )
+
     with st.container(horizontal=True):
-        st.metric("Training reviews", len(df), border=True)
+        st.metric("Displayed reviews", len(filtered_df), border=True)
         st.metric(
             "TF-IDF features",
             len(vectorizer.get_feature_names_out()),
             border=True,
         )
         st.metric("NLP models", len(trained_models), border=True)
-        st.metric("Datasets", df["DatasetSource"].nunique(), border=True)
+        st.metric("Datasets", filtered_df["DatasetSource"].nunique(), border=True)
         st.metric(
             "Best accuracy",
             best_model_row["Model"],
@@ -113,7 +128,7 @@ with owner_tab:
         )
 
     sentiment_counts = (
-        df["Sentiment"]
+        filtered_df["Sentiment"]
         .value_counts()
         .reindex(SENTIMENT_LABELS, fill_value=0)
         .rename_axis("Sentiment")
@@ -130,7 +145,7 @@ with owner_tab:
         )
 
     source_counts = (
-        df["DatasetSource"]
+        filtered_df["DatasetSource"]
         .value_counts()
         .rename_axis("Dataset")
         .reset_index(name="Reviews")
@@ -177,4 +192,4 @@ with owner_tab:
             ]
             if column in df.columns
         ]
-        st.dataframe(df[preview_columns].head(10))
+        st.dataframe(filtered_df[preview_columns].head(10), hide_index=True)
