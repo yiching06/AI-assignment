@@ -73,7 +73,7 @@ def get_negative_cue_words():
 @lru_cache(maxsize=1)
 def get_sentiment_phrases():
     with SENTIMENT_PHRASES_PATH.open("r", encoding="utf-8") as phrase_file:
-        phrase_rules = json.load(phrase_file)
+        phrase_rules = json.load(phrase_file) #find in resources/sentiment_phrases.json
 
     return {
         rule_name: set(phrases)

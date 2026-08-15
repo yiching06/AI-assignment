@@ -2,6 +2,8 @@ from ai_assignment.core.constants import (
     MIXED_SENTIMENT_CONNECTORS,
     NEUTRAL_KEYWORDS,
     NEUTRAL_SHORT_RESPONSES,
+    POSITIVE_SHORT_RESPONSES,
+    STRONG_NEGATIVE_KEYWORDS,
 )
 from ai_assignment.core.lexicons import (
     get_negative_cue_phrases,
@@ -19,6 +21,15 @@ def is_neutral_short_response(text):
     return (
         normalized_text in NEUTRAL_SHORT_RESPONSES
         or compact_text in NEUTRAL_SHORT_RESPONSES
+    )
+
+
+def is_positive_short_response(text):
+    normalized_text = normalize_short_response(text)
+    compact_text = normalized_text.replace(" ", "") #remove space between words to check if the compacted text is in the positive short responses set
+    return (
+        normalized_text in POSITIVE_SHORT_RESPONSES
+        or compact_text in POSITIVE_SHORT_RESPONSES
     )
 
 
@@ -61,4 +72,16 @@ def has_mixed_sentiment(text, cleaned_text):
 
 def is_positive_review(text):
     normalized_text = normalize_short_response(text)
-    return any(phrase in normalized_text for phrase in get_positive_phrases())
+    return is_positive_short_response(text) or any(
+        phrase in normalized_text for phrase in get_positive_phrases()
+    )
+
+
+def is_negative_review(text, cleaned_text):
+    normalized_text = normalize_short_response(text)
+    cleaned_words = set(cleaned_text.split())
+
+    if any(phrase in normalized_text for phrase in get_negative_cue_phrases()):
+        return True
+
+    return bool(cleaned_words.intersection(STRONG_NEGATIVE_KEYWORDS))

@@ -50,7 +50,7 @@ def add_custom_neutral_training_examples(x_train, y_train):
     return augmented_reviews, augmented_labels
 
 
-def train_sentiment_models(df):
+def train_sentiment_models(df): #trains the sentiment models using the provided dataset and returns the trained models
     vectorizer = TfidfVectorizer(max_features=3000, ngram_range=(1, 2))
     reviews = df["cleaned_review"]
     labels = df["Sentiment"]
