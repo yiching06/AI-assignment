@@ -33,6 +33,19 @@ def is_positive_short_response(text):
     )
 
 
+def has_positive_keyword(text, cleaned_text):
+    normalized_words = set(normalize_short_response(text).split())
+    cleaned_words = set(cleaned_text.split())
+
+    if normalized_words.intersection({"not", "no", "never"}):
+        return False
+
+    if cleaned_words.intersection(STRONG_NEGATIVE_KEYWORDS):
+        return False
+
+    return bool(cleaned_words.intersection(POSITIVE_SHORT_RESPONSES))
+
+
 def is_neutral_review(text, cleaned_text):
     normalized_text = normalize_short_response(text)
     cleaned_words = set(cleaned_text.split())
@@ -70,10 +83,14 @@ def has_mixed_sentiment(text, cleaned_text):
     return has_positive_cue and has_negative_cue
 
 
-def is_positive_review(text):
+def is_positive_review(text, cleaned_text):
     normalized_text = normalize_short_response(text)
-    return is_positive_short_response(text) or any(
-        phrase in normalized_text for phrase in get_positive_phrases()
+    if any(phrase in normalized_text for phrase in get_positive_phrases()):
+        return True
+
+    return is_positive_short_response(text) or has_positive_keyword(
+        text,
+        cleaned_text,
     )
 
 

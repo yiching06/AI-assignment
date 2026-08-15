@@ -12,11 +12,11 @@ def predict_sentiment(custom_review, model, vectorizer, lemmatizer, stop_words):
         raise ValueError("Input cannot be empty.")
 
     cleaned_text = clean_review(custom_review, lemmatizer, stop_words)
-    if is_positive_review(custom_review):
-        return "Positive", SENTIMENT_SCORES["Positive"], cleaned_text
-
     if is_neutral_review(custom_review, cleaned_text):
         return "Neutral", SENTIMENT_SCORES["Neutral"], cleaned_text
+
+    if is_positive_review(custom_review, cleaned_text):
+        return "Positive", SENTIMENT_SCORES["Positive"], cleaned_text
 
     if is_negative_review(custom_review, cleaned_text):
         return "Negative", SENTIMENT_SCORES["Negative"], cleaned_text
