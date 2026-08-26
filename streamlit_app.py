@@ -4,6 +4,7 @@ import streamlit as st
 from ai_assignment.core.sentiment_analyzer import (
     EXTERNAL_DATASETS,
     KAGGLE_DATASETS,
+    POSITIVE_REVIEW_SAMPLE_SIZE,
     SENTIMENT_LABELS,
     ensure_nltk_data,
     load_and_clean_dataset,
@@ -19,9 +20,11 @@ st.set_page_config(
 
 
 @st.cache_resource(show_spinner=False)
-def load_models():
+def load_models(positive_review_sample_size):
     ensure_nltk_data()
-    df, lemmatizer, stop_words = load_and_clean_dataset()
+    df, lemmatizer, stop_words = load_and_clean_dataset(
+        positive_review_sample_size
+    )
     trained_models, vectorizer, metrics_df = train_sentiment_models(df)
     return df, lemmatizer, stop_words, trained_models, vectorizer, metrics_df
 
@@ -42,7 +45,7 @@ st.caption(
 try:
     with st.spinner("Downloading dataset and training NLP models..."):
         df, lemmatizer, stop_words, trained_models, vectorizer, metrics_df = (
-            load_models()
+            load_models(POSITIVE_REVIEW_SAMPLE_SIZE)
         )
 except Exception as error:
     st.error(f"Could not load model: {error}")
@@ -112,7 +115,12 @@ with owner_tab:
     )
 
     with st.container(horizontal=True):
-        st.metric("Displayed reviews", len(filtered_df), border=True)
+        st.metric("Displayed reviews", f"{len(filtered_df):,}", border=True)
+        st.metric(
+            "Positive review cap",
+            f"{POSITIVE_REVIEW_SAMPLE_SIZE:,}",
+            border=True,
+        )
         st.metric(
             "TF-IDF features",
             len(vectorizer.get_feature_names_out()),
@@ -192,4 +200,4 @@ with owner_tab:
             ]
             if column in df.columns
         ]
-        st.dataframe(filtered_df[preview_columns].head(10), hide_index=True)
+        st.dataframe(filtered_df[preview_columns], hide_index=True)

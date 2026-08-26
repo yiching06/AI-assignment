@@ -13,9 +13,11 @@ import pandas as pd
 from nltk.stem import WordNetLemmatizer
 
 from ai_assignment.core.constants import (
+    DATASET_SAMPLE_RANDOM_STATE,
     EXTERNAL_DATA_DIR,
     EXTERNAL_DATASETS,
     KAGGLE_DATASETS,
+    POSITIVE_REVIEW_SAMPLE_SIZE,
     SENTIMENT_SCORES,
 )
 from ai_assignment.core.preprocessing import build_stop_words, clean_review
@@ -325,8 +327,24 @@ def load_combined_dataset(): #combine 3 datasets into 1 central dataset
     return df.drop_duplicates(subset=["Review", "Sentiment"])
 
 
-def load_and_clean_dataset():
-    df = load_combined_dataset()
+def sample_positive_reviews(df, positive_limit=POSITIVE_REVIEW_SAMPLE_SIZE):
+    positive_rows = df["Sentiment"].eq("Positive")
+    positive_df = df[positive_rows]
+
+    if len(positive_df) <= positive_limit:
+        return df.reset_index(drop=True)
+
+    sampled_positive_df = positive_df.sample(
+        n=positive_limit,
+        random_state=DATASET_SAMPLE_RANDOM_STATE,
+    )
+    sampled_df = pd.concat([df[~positive_rows], sampled_positive_df]).sort_index()
+
+    return sampled_df.reset_index(drop=True)
+
+
+def load_and_clean_dataset(positive_limit=POSITIVE_REVIEW_SAMPLE_SIZE):
+    df = sample_positive_reviews(load_combined_dataset(), positive_limit)
 
     lemmatizer = WordNetLemmatizer()
     stop_words = build_stop_words()

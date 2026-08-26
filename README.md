@@ -82,6 +82,8 @@ The `joebeachcapital/restaurant-reviews` dataset stores full restaurant reviews 
 
 The Yelp dataset contains restaurant review text with labelled sentiment and rating metadata. The app standardizes its labels into the same Negative, Neutral, and Positive classes.
 
+To keep the training dataset more balanced, the app deterministically samples at most 6,000 Positive reviews and keeps all available Neutral and Negative reviews. The owner dashboard displays counts and preview rows from this sampled training dataset.
+
 Prediction labels are also shown as numeric sentiment scores:
 
 - Negative: `0`
