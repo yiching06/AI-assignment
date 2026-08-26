@@ -1,11 +1,20 @@
 # Restaurant Review Sentiment Analysis
 
-This project is a Streamlit app that uses multiple restaurant review datasets, trains multiple TF-IDF based NLP models, and lets you test custom restaurant reviews as Negative, Neutral, or Positive.
+This project is a Streamlit app that uses one restaurant review dataset, trains multiple TF-IDF based NLP models, and lets you test custom restaurant reviews as Negative, Neutral, or Positive.
 
-The app has two tabs:
+The app has a login screen and role-based navigation in the left sidebar:
 
-- Customer review: customers enter a review, choose a model, and get a sentiment prediction.
-- Restaurant owner: owners view sentiment distribution and compare model evaluation metrics.
+- Customer review: customers enter a restaurant review and receive a thank-you message.
+- Restaurant owner: owners choose an NLP model, view sentiment analysis results for submitted customer reviews in one tab, and filter the labelled training reviews in another tab.
+
+The restaurant owner admin account is fixed:
+
+- Admin: `admin` / `admin123`
+
+Only customer accounts can be created from the app. Customer accounts and submitted reviews are saved locally. Customer reviews are saved as raw submissions first; sentiment analysis is calculated later when the admin chooses an NLP model:
+
+- Customer accounts: `data/customer_accounts.csv`
+- Customer reviews: `data/customer_reviews.csv`
 
 ## Project Structure
 
@@ -26,6 +35,9 @@ AI-assignment/
 +-- streamlit_app.py
 +-- requirements.txt
 +-- README.md
++-- data/
+    +-- customer_accounts.csv
+    +-- customer_reviews.csv
 ```
 
 ## Install Dependencies
@@ -53,26 +65,16 @@ The app downloads this dataset with KaggleHub:
 ```python
 import kagglehub
 
-semeval_path = kagglehub.dataset_download("charitarth/semeval-2014-task-4-aspectbasedsentimentanalysis")
 reviews_path = kagglehub.dataset_download("joebeachcapital/restaurant-reviews")
 
-print("Path to SemEval dataset files:", semeval_path)
 print("Path to restaurant reviews dataset files:", reviews_path)
 ```
 
-The KaggleHub datasets are stored in KaggleHub's cache, not in this project folder. The app also downloads a small Yelp Restaurant Reviews Sentiment ZIP from Zenodo into `data/external/`, combines all datasets into one training dataframe, and tracks each row with `DatasetSource`.
+The KaggleHub dataset is stored in KaggleHub's cache, not in this project folder. The app loads the selected dataset into one training dataframe and tracks each row with `DatasetSource`.
 
-The app uses these datasets:
+The app uses this dataset:
 
-- `charitarth/semeval-2014-task-4-aspectbasedsentimentanalysis`
 - `joebeachcapital/restaurant-reviews`
-- Yelp Restaurant Reviews Sentiment Dataset from Zenodo: `https://zenodo.org/records/18723813`
-
-The SemEval dataset stores restaurant review sentences in XML with aspect-level polarity annotations. The app converts those annotations into one sentence-level sentiment class:
-
-- Negative: only negative aspect polarity
-- Neutral: neutral, conflict, or mixed positive and negative polarity
-- Positive: only positive aspect polarity
 
 The `joebeachcapital/restaurant-reviews` dataset stores full restaurant reviews with ratings. The app converts ratings into sentiment classes:
 
@@ -80,9 +82,7 @@ The `joebeachcapital/restaurant-reviews` dataset stores full restaurant reviews 
 - Neutral: rating from `2.5` to below `4`
 - Positive: rating `4` and above
 
-The Yelp dataset contains restaurant review text with labelled sentiment and rating metadata. The app standardizes its labels into the same Negative, Neutral, and Positive classes.
-
-To keep the training dataset more balanced, the app deterministically samples at most 6,000 Positive reviews and keeps all available Neutral and Negative reviews. The owner dashboard displays counts and preview rows from this sampled training dataset.
+To keep the training dataset more balanced, the app deterministically samples at most 3,500 Positive reviews and keeps all available Neutral and Negative reviews. The owner dashboard displays counts and preview rows from this sampled training dataset.
 
 Prediction labels are also shown as numeric sentiment scores:
 
@@ -115,7 +115,7 @@ Each model is evaluated with:
 
 - `streamlit_app.py` is the main Streamlit entrypoint.
 - `ai_assignment/core/constants.py` stores dataset IDs, labels, scores, and shared paths.
-- `ai_assignment/core/datasets.py` downloads, parses, combines, and cleans datasets.
+- `ai_assignment/core/datasets.py` downloads, parses, and cleans the selected dataset.
 - `ai_assignment/core/lexicons.py` loads NLTK sentiment cue words and project phrase rules.
 - `ai_assignment/core/models.py` trains SVM, Decision Tree, and Logistic Regression and calculates metrics.
 - `ai_assignment/core/prediction.py` predicts sentiment for a custom review.

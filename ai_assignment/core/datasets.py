@@ -1,8 +1,4 @@
 from pathlib import Path
-import re
-import urllib.request
-import xml.etree.ElementTree as ET
-import zipfile
 
 try:
     import kagglehub
@@ -14,8 +10,6 @@ from nltk.stem import WordNetLemmatizer
 
 from ai_assignment.core.constants import (
     DATASET_SAMPLE_RANDOM_STATE,
-    EXTERNAL_DATA_DIR,
-    EXTERNAL_DATASETS,
     KAGGLE_DATASETS,
     POSITIVE_REVIEW_SAMPLE_SIZE,
     SENTIMENT_SCORES,
@@ -61,31 +55,10 @@ def find_cached_kaggle_dataset(dataset_id):
     return sorted(versions)[-1]
 
 
-def download_external_zip_dataset(dataset_name, dataset_url):
-    dataset_dir = EXTERNAL_DATA_DIR / slugify(dataset_name)
-    zip_path = dataset_dir / "dataset.zip"
-    dataset_dir.mkdir(parents=True, exist_ok=True)
-
-    if list(dataset_dir.rglob("*.csv")):
-        return dataset_dir
-
-    urllib.request.urlretrieve(dataset_url, zip_path)
-
-    with zipfile.ZipFile(zip_path) as zip_file:
-        zip_file.extractall(dataset_dir)
-
-    return dataset_dir
-
-
-def slugify(text):
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
 def find_dataset_file(dataset_dir):
     dataset_dir = Path(dataset_dir)
     candidates = (
-        list(dataset_dir.rglob("*.xml"))
-        + list(dataset_dir.rglob("*.tsv"))
+        list(dataset_dir.rglob("*.tsv"))
         + list(dataset_dir.rglob("*.csv"))
     )
     restaurant_candidates = [
@@ -102,7 +75,7 @@ def find_dataset_file(dataset_dir):
 
     if not candidates:
         raise FileNotFoundError(
-            f"No XML, CSV, or TSV dataset file found in {dataset_dir}"
+            f"No CSV or TSV dataset file found in {dataset_dir}"
         )
 
     return candidates[0]
@@ -110,9 +83,6 @@ def find_dataset_file(dataset_dir):
 
 def read_reviews_dataset(dataset_path):
     dataset_path = Path(dataset_path)
-    if dataset_path.suffix.lower() == ".xml":
-        return read_semeval_restaurant_dataset(dataset_path)
-
     separator = "\t" if dataset_path.suffix.lower() == ".tsv" else ","
     df = pd.read_csv(dataset_path, sep=separator)
 
@@ -227,69 +197,6 @@ def normalize_sentiment_label(value):
     return sentiment_map.get(value)
 
 
-def read_semeval_restaurant_dataset(dataset_path):
-    tree = ET.parse(dataset_path)
-    rows = []
-
-    for sentence in tree.findall(".//sentence"):
-        text_element = sentence.find("text")
-        review = (
-            text_element.text.strip()
-            if text_element is not None and text_element.text
-            else ""
-        )
-        polarities = extract_semeval_polarities(sentence)
-        sentiment = semeval_polarities_to_sentiment(polarities)
-
-        if review and sentiment is not None:
-            rows.append(
-                {
-                    "Review": review,
-                    "Sentiment": sentiment,
-                    "SentimentScore": SENTIMENT_SCORES[sentiment],
-                    "AspectPolarities": ", ".join(polarities),
-                    "SourceFile": dataset_path.name,
-                }
-            )
-
-    if not rows:
-        raise ValueError(
-            f"No labelled restaurant review sentences found in {dataset_path}"
-        )
-
-    return pd.DataFrame(rows)
-
-
-def extract_semeval_polarities(sentence):
-    polarities = []
-    for element in sentence.findall(".//*[@polarity]"):
-        polarity = element.attrib.get("polarity", "").strip().lower()
-        if polarity:
-            polarities.append(polarity)
-
-    return sorted(set(polarities))
-
-
-def semeval_polarities_to_sentiment(polarities):
-    polarity_set = set(polarities)
-    if not polarity_set:
-        return None
-    if "conflict" in polarity_set:
-        return "Neutral"
-    if {"positive", "negative"}.issubset(polarity_set):
-        return "Neutral"
-    if "neutral" in polarity_set and not polarity_set.intersection(
-        {"positive", "negative"}
-    ):
-        return "Neutral"
-    if polarity_set == {"positive"}:
-        return "Positive"
-    if polarity_set == {"negative"}:
-        return "Negative"
-
-    return "Neutral"
-
-
 def rating_to_sentiment(rating):
     if pd.isna(rating):
         return None
@@ -307,20 +214,10 @@ def load_dataset(dataset_name, dataset_id):
     return df.assign(DatasetSource=dataset_name)
 
 
-def load_external_dataset(dataset_name, dataset_url):
-    dataset_dir = download_external_zip_dataset(dataset_name, dataset_url)
-    dataset_path = find_dataset_file(dataset_dir)
-    df = read_reviews_dataset(dataset_path)
-    return df.assign(DatasetSource=dataset_name)
-
-
-def load_combined_dataset(): #combine 3 datasets into 1 central dataset
+def load_combined_dataset(): #load selected training dataset into 1 central dataset
     dataframes = []
     for dataset_name, dataset_id in KAGGLE_DATASETS.items():
         dataframes.append(load_dataset(dataset_name, dataset_id))
-
-    for dataset_name, dataset_url in EXTERNAL_DATASETS.items():
-        dataframes.append(load_external_dataset(dataset_name, dataset_url))
 
     df = pd.concat(dataframes, ignore_index=True)
 
