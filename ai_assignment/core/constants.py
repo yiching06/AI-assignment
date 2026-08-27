@@ -5,6 +5,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 NLTK_DATA_DIR = PROJECT_ROOT / "nltk_data"
 SENTIMENT_PHRASES_PATH = PACKAGE_ROOT / "resources" / "sentiment_phrases.json"
+APP_TITLE = "The Grand Restaurant Review"
+
+ROLE_CUSTOMER = "Customer"
+ROLE_RESTAURANT_OWNER = "Restaurant owner"
+ROLE_DEVELOPER = "Developer"
+
+RESTAURANT_OWNER_USERNAME = "restaurantowner"
+RESTAURANT_OWNER_DISPLAY_USERNAME = "restaurantOwner"
+DEVELOPER_USERNAME = "admin"
 
 KAGGLE_DATASETS = {
     "10000 Restaurant Reviews": "joebeachcapital/restaurant-reviews",

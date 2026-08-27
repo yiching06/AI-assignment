@@ -4,14 +4,16 @@ This project is a Streamlit app that uses one restaurant review dataset, trains 
 
 The app has a login screen and role-based navigation in the left sidebar:
 
-- Customer review: customers enter a restaurant review and receive a thank-you message.
-- Restaurant owner: owners choose an NLP model, view sentiment analysis results for submitted customer reviews in one tab, and filter the labelled training reviews in another tab.
+- Customer review: customers enter a restaurant review and see the sentiment result from the best-accuracy model.
+- Restaurant owner: the owner can only view customer-submitted reviews with sentiment results from the best-accuracy model, without sentiment scores.
+- Developer tools: developers choose an NLP model, compare model accuracy, view sentiment scores for submitted customer reviews, view labelled training sentiment, and filter submitted customer reviews by Positive, Negative, or Neutral predictions.
 
-The restaurant owner admin account is fixed:
+The fixed role accounts are:
 
-- Admin: `admin` / `admin123`
+- Restaurant owner: `restaurantOwner` / `restaurantOwner123`
+- Developer: `admin` / `admin123`
 
-Only customer accounts can be created from the app. Customer accounts and submitted reviews are saved locally. Customer reviews are saved as raw submissions first; sentiment analysis is calculated later when the admin chooses an NLP model:
+Only customer accounts can be created from the app. Customer accounts and submitted reviews are saved locally. Customer reviews are saved as raw submissions first; sentiment analysis is calculated when a role page displays or submits a review:
 
 - Customer accounts: `data/customer_accounts.csv`
 - Customer reviews: `data/customer_reviews.csv`
@@ -82,7 +84,7 @@ The `joebeachcapital/restaurant-reviews` dataset stores full restaurant reviews 
 - Neutral: rating from `2.5` to below `4`
 - Positive: rating `4` and above
 
-To keep the training dataset more balanced, the app deterministically samples at most 3,500 Positive reviews and keeps all available Neutral and Negative reviews. The owner dashboard displays counts and preview rows from this sampled training dataset.
+To keep the training dataset more balanced, the app deterministically samples at most 4,500 Positive reviews and keeps all available Neutral and Negative reviews. The developer dashboard displays counts and preview rows from this sampled training dataset.
 
 Prediction labels are also shown as numeric sentiment scores:
 
@@ -107,9 +109,9 @@ The app trains and compares these classification models with the same TF-IDF fea
 Each model is evaluated with:
 
 - Accuracy
-- Precision
-- Recall
-- F1 Score
+- Macro-averaged Precision
+- Macro-averaged Recall
+- Macro-averaged F1 Score
 
 ## File Roles
 

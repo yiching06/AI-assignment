@@ -94,19 +94,19 @@ def calculate_classification_metrics(y_test, predictions):
         "Precision": precision_score(
             y_test,
             predictions,
-            average="weighted",
+            average="macro",
             zero_division=0,
         ),
         "Recall": recall_score(
             y_test,
             predictions,
-            average="weighted",
+            average="macro",
             zero_division=0,
         ),
         "F1 Score": f1_score(
             y_test,
             predictions,
-            average="weighted",
+            average="macro",
             zero_division=0,
         ),
     }
