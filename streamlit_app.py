@@ -283,12 +283,6 @@ def render_authentication():
 
             st.error(message)
 
-        with note_col:
-            with st.container(border=True):
-                st.subheader("Customer account")
-                st.caption("Review submissions are saved locally for the owner and developer views.")
-
-
 def render_sidebar_navigation():
     role = st.session_state.authenticated_role
     username = st.session_state.authenticated_user
