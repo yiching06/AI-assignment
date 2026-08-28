@@ -2,7 +2,13 @@ import pandas as pd
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -71,6 +77,7 @@ def train_sentiment_models(df): #trains the sentiment models using the provided 
 
     trained_models = {}
     metrics_rows = []
+    confusion_matrices = {}
 
     for model_name, model in build_sentiment_models().items():
         model.fit(x_train, y_train)
@@ -82,10 +89,24 @@ def train_sentiment_models(df): #trains the sentiment models using the provided 
                 **calculate_classification_metrics(y_test, predictions),
             }
         )
+        confusion_matrices[model_name] = build_confusion_matrix(
+            y_test,
+            predictions,
+        )
 
     metrics_df = pd.DataFrame(metrics_rows)
 
-    return trained_models, vectorizer, metrics_df
+    return trained_models, vectorizer, metrics_df, confusion_matrices
+
+
+def build_confusion_matrix(y_test, predictions):
+    label_order = ["Positive", "Neutral", "Negative"]
+    matrix = confusion_matrix(y_test, predictions, labels=label_order)
+    return pd.DataFrame(
+        matrix,
+        index=[f"Actual {label}" for label in label_order],
+        columns=[f"Predicted {label}" for label in label_order],
+    )
 
 
 def calculate_classification_metrics(y_test, predictions):

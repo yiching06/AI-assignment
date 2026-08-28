@@ -3,9 +3,26 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+ASSETS_DIR = PROJECT_ROOT / "assets"
 NLTK_DATA_DIR = PROJECT_ROOT / "nltk_data"
 SENTIMENT_PHRASES_PATH = PACKAGE_ROOT / "resources" / "sentiment_phrases.json"
 APP_TITLE = "The Grand Restaurant Review"
+RESTAURANT_NAME = "The Grand Restaurant"
+RESTAURANT_IMAGE_PATH = ASSETS_DIR / "grand_restaurant.png"
+RESTAURANT_DESCRIPTION = (
+    "The Grand Restaurant is an elegant dining destination that offers a warm "
+    "and comfortable atmosphere for customers to enjoy a memorable meal. With "
+    "its stylish interior, soft lighting, and welcoming environment, the "
+    "restaurant is suitable for family gatherings, casual dining, celebrations, "
+    "and special occasions.\n\n"
+    "The restaurant serves a variety of carefully prepared dishes made with "
+    "fresh ingredients, with a focus on quality, taste, and presentation. "
+    "Friendly staff and attentive service help create an enjoyable dining "
+    "experience for every customer.\n\n"
+    "Customers can share their dining experiences by leaving reviews and "
+    "ratings based on the food quality, service, atmosphere, and overall "
+    "experience at The Grand Restaurant."
+)
 
 ROLE_CUSTOMER = "Customer"
 ROLE_RESTAURANT_OWNER = "Restaurant owner"

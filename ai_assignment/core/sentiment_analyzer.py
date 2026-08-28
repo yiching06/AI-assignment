@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 def main():
     ensure_nltk_data()
     df, lemmatizer, stop_words = load_and_clean_dataset()
-    trained_models, vectorizer, metrics_df = train_sentiment_models(df)
+    trained_models, vectorizer, metrics_df, _ = train_sentiment_models(df)
     best_model_name = metrics_df.loc[metrics_df["Accuracy"].idxmax(), "Model"]
     label, score, cleaned_text = predict_sentiment(
         "The food was absolutely delicious and the service was amazing!",

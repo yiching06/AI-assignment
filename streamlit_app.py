@@ -1,5 +1,6 @@
 import hashlib
 from datetime import datetime
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +9,9 @@ import streamlit as st
 from ai_assignment.core.constants import (
     APP_TITLE,
     DEVELOPER_USERNAME,
+    RESTAURANT_DESCRIPTION,
+    RESTAURANT_IMAGE_PATH,
+    RESTAURANT_NAME,
     RESTAURANT_OWNER_DISPLAY_USERNAME,
     RESTAURANT_OWNER_USERNAME,
     ROLE_CUSTOMER,
@@ -38,7 +42,7 @@ RESTAURANT_OWNER_PASSWORD_HASH = hashlib.sha256(
     "restaurantOwner123".encode("utf-8")
 ).hexdigest()
 TRAINING_DATASET_CACHE_VERSION = (
-    f"positive-cap-{POSITIVE_REVIEW_SAMPLE_SIZE}-macro-metrics-v1"
+    f"positive-cap-{POSITIVE_REVIEW_SAMPLE_SIZE}-macro-metrics-confusion-v1"
 )
 SENTIMENT_FILTER_OPTIONS = ["All", *SENTIMENT_LABELS]
 
@@ -59,8 +63,237 @@ def load_models(positive_review_sample_size, cache_version):
     df, lemmatizer, stop_words = load_and_clean_dataset(
         positive_review_sample_size
     )
-    trained_models, vectorizer, metrics_df = train_sentiment_models(df)
-    return df, lemmatizer, stop_words, trained_models, vectorizer, metrics_df
+    trained_models, vectorizer, metrics_df, confusion_matrices = (
+        train_sentiment_models(df)
+    )
+    return (
+        df,
+        lemmatizer,
+        stop_words,
+        trained_models,
+        vectorizer,
+        metrics_df,
+        confusion_matrices,
+    )
+
+
+def render_restaurant_review_styles():
+    st.html(
+        """
+        <style>
+            [data-testid="stAppViewContainer"] {
+                background: #f7f3ef;
+            }
+
+            .block-container {
+                max-width: 1120px;
+                padding-top: 1.4rem;
+            }
+
+            .rr-page-header {
+                align-items: center;
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 18px;
+                margin-top: 46px;
+            }
+
+            .rr-eyebrow {
+                color: #b65f18;
+                font-size: 13px;
+                font-weight: 800;
+                letter-spacing: 0;
+                margin-bottom: 4px;
+            }
+
+            .rr-page-header h2 {
+                color: #171717;
+                font-size: 24px;
+                line-height: 1.15;
+                margin: 0;
+            }
+
+            .rr-role-pill {
+                background: white;
+                border: 1px solid #eaded2;
+                border-radius: 999px;
+                color: #5b4634;
+                font-size: 13px;
+                font-weight: 750;
+                padding: 8px 14px;
+            }
+
+            .st-key-restaurant_cover_image {
+                background: white;
+                border: 1px solid #eaded2;
+                border-radius: 8px;
+                margin: 0 auto 20px;
+                max-width: 720px;
+                overflow: hidden;
+                padding: 8px;
+            }
+
+            .st-key-restaurant_cover_image img {
+                aspect-ratio: 5 / 3;
+                border-radius: 6px;
+                object-fit: cover;
+                width: 100%;
+            }
+
+            .rr-summary-card,
+            .rr-info,
+            .rr-review-card {
+                background: white;
+                border: 1px solid #eaded2;
+                border-radius: 8px;
+                box-sizing: border-box;
+                box-shadow: 0 12px 30px rgba(70, 45, 20, 0.07);
+                color: #191919;
+            }
+
+            .rr-summary-card {
+                min-height: 100%;
+                padding: 20px;
+            }
+
+            .rr-title {
+                font-size: 34px;
+                font-weight: 850;
+                line-height: 1.1;
+                margin: 0 0 12px;
+            }
+
+            .rr-status-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 18px;
+            }
+
+            .rr-status-pill {
+                border-radius: 999px;
+                font-size: 12px;
+                font-weight: 800;
+                padding: 5px 10px;
+            }
+
+            .rr-open {
+                background: #e8f7e8;
+                color: #228a34;
+            }
+
+            .rr-tag {
+                background: #fff1e2;
+                color: #a85615;
+            }
+
+            .rr-description p {
+                color: #49413b;
+                font-size: 14px;
+                line-height: 1.55;
+                margin: 0 0 12px;
+            }
+
+            .rr-main-grid {
+                margin-top: 18px;
+            }
+
+            .rr-rule {
+                background: #eaded2;
+                height: 2px;
+                margin: 4px 0 16px;
+                width: 100%;
+            }
+
+            .rr-section-heading {
+                align-items: center;
+                border-bottom: 2px solid #eaded2;
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 16px;
+                padding: 0 0 10px;
+            }
+
+            .rr-section-heading h3,
+            .rr-info h3 {
+                color: #171717;
+                font-size: 21px;
+                line-height: 1.2;
+                margin: 0;
+            }
+
+            .rr-section-action {
+                color: #b65f18;
+                font-size: 13px;
+                font-weight: 800;
+            }
+
+            .rr-owner-heading {
+                border-bottom: 2px solid #eaded2;
+                margin: 0 0 16px;
+                padding-bottom: 8px;
+            }
+
+            .rr-info {
+                color: #242424;
+                padding: 20px;
+            }
+
+            .rr-info-line {
+                background: #eaded2;
+                height: 2px;
+                margin: 10px 0 16px;
+                width: 100%;
+            }
+
+            .rr-info-item {
+                margin-bottom: 18px;
+            }
+
+            .rr-info-label {
+                font-size: 13px;
+                font-weight: 800;
+                margin-bottom: 7px;
+            }
+
+            .rr-info-value {
+                color: #6f655e;
+                font-size: 13px;
+                line-height: 1.55;
+            }
+
+            .rr-review-card {
+                margin-bottom: 12px;
+                padding: 14px 16px;
+            }
+
+            .rr-review-meta {
+                color: #6f655e;
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+
+            .rr-review-author {
+                color: #171717;
+                font-size: 14px;
+                font-weight: 850;
+            }
+
+            .rr-review-text {
+                color: #39332e;
+                font-size: 13px;
+                line-height: 1.5;
+                margin: 0;
+            }
+
+            .stFormSubmitButton button[kind="primary"],
+            .stButton button[kind="primary"] {
+                background: #b65f18;
+                border-color: #b65f18;
+            }
+        </style>
+        """,
+    )
 
 
 def render_page_header(title, subtitle, icon_name="restaurant"):
@@ -68,6 +301,111 @@ def render_page_header(title, subtitle, icon_name="restaurant"):
     st.title(title)
     if subtitle:
         st.caption(subtitle)
+
+
+def render_restaurant_review_header(role_label):
+    st.html(
+        f"""
+        <div class="rr-page-header">
+            <div>
+                <div class="rr-eyebrow">Restaurant review</div>
+                <h2>{escape(RESTAURANT_NAME)}</h2>
+            </div>
+            <div class="rr-role-pill">{escape(role_label)}</div>
+        </div>
+        """,
+    )
+
+
+def render_restaurant_overview():
+    description_html = "".join(
+        f"<p>{escape(paragraph)}</p>"
+        for paragraph in RESTAURANT_DESCRIPTION.split("\n\n")
+    )
+
+    with st.container(key="restaurant_cover_image"):
+        st.image(str(RESTAURANT_IMAGE_PATH), width="stretch")
+
+    content_col, info_col = st.columns([1.35, 0.85], gap="large")
+
+    with content_col:
+        st.html(
+            f"""
+            <section class="rr-summary-card">
+                <h1 class="rr-title">{escape(RESTAURANT_NAME)}</h1>
+                <div class="rr-status-row">
+                    <span class="rr-status-pill rr-open">Open</span>
+                    <span class="rr-status-pill rr-tag">Fresh ingredients</span>
+                    <span class="rr-status-pill rr-tag">Elegant dining</span>
+                </div>
+                <div class="rr-description">{description_html}</div>
+            </section>
+            """,
+        )
+
+    st.html('<div class="rr-main-grid"></div>')
+
+    with info_col:
+        st.html(
+            """
+            <aside class="rr-info">
+                <h3>General info</h3>
+                <div class="rr-info-line"></div>
+                <div class="rr-info-item">
+                    <div class="rr-info-label">Dining atmosphere</div>
+                    <div class="rr-info-value">Elegant, warm, comfortable, and softly lit.</div>
+                </div>
+                <div class="rr-info-item">
+                    <div class="rr-info-label">Suitable for</div>
+                    <div class="rr-info-value">Family gatherings, casual dining, celebrations, and special occasions.</div>
+                </div>
+                <div class="rr-info-item">
+                    <div class="rr-info-label">Review areas</div>
+                    <div class="rr-info-value">Food quality, service, atmosphere, and overall experience.</div>
+                </div>
+            </aside>
+            """,
+        )
+
+    return content_col
+
+
+def render_review_section_heading(title, action_label=None):
+    action_html = (
+        f'<span class="rr-section-action">{escape(action_label)}</span>'
+        if action_label
+        else ""
+    )
+    st.html(
+        f"""
+        <div class="rr-section-heading">
+            <h3>{escape(title)}</h3>
+            {action_html}
+        </div>
+        """,
+    )
+
+
+def render_recent_review_cards(limit=3):
+    reviews_df = load_customer_reviews()
+    if reviews_df.empty:
+        st.caption("No customer reviews yet.")
+        return
+
+    recent_reviews = reviews_df.tail(limit).iloc[::-1]
+    for _, review_row in recent_reviews.iterrows():
+        submitted_at = review_row["submitted_at"] or "Recently"
+        username = review_row["username"] or "Customer"
+        review = review_row["review"]
+        st.html(
+            f"""
+            <article class="rr-review-card">
+                <div class="rr-review-author">{escape(username)}</div>
+                <div class="rr-review-meta">Reviewed date - {escape(submitted_at)}</div>
+                <p class="rr-review-text">{escape(review)}</p>
+            </article>
+            """,
+        )
 
 
 def render_table(
@@ -333,18 +671,17 @@ def render_customer_review(
     lemmatizer,
     stop_words,
 ):
-    render_page_header(
-        APP_TITLE,
-        "Share the dining moment that stood out.",
-        "rate_review",
-    )
+    render_restaurant_review_styles()
+    render_restaurant_review_header("Customer")
+    review_col = render_restaurant_overview()
+
     _, best_model, _ = get_best_model_details(
         trained_models,
         metrics_df,
     )
 
-    with st.container(border=True):
-        st.subheader("Your restaurant review")
+    with review_col:
+        render_review_section_heading("Reviews", "Write a review")
         with st.form("sentiment_form", border=False):
             review = st.text_area(
                 "Restaurant review",
@@ -357,27 +694,29 @@ def render_customer_review(
                 icon=":material/rate_review:",
             )
 
-    if submitted:
-        if not review.strip(): #using strip() to check
-            st.error("Please enter a review before continuing.") #if the customer submit an empty review, display an error message
-            st.stop()
+        if submitted:
+            if not review.strip(): #using strip() to check
+                st.error("Please enter a review before continuing.") #if the customer submit an empty review, display an error message
+                st.stop()
 
-        try:
-            sentiment, score, _ = predict_sentiment(
-                review,
-                best_model,
-                vectorizer,
-                lemmatizer,
-                stop_words,
-            )
-            save_customer_review(st.session_state.authenticated_user, review)
-        except Exception as error:
-            st.error(f"Review submission failed: {error}")
-        else:
-            st.success(
-                "Thank you for your review to The Grand Restaurant!",
-                icon=":material/check_circle:",
-            )
+            try:
+                sentiment, score, _ = predict_sentiment(
+                    review,
+                    best_model,
+                    vectorizer,
+                    lemmatizer,
+                    stop_words,
+                )
+                save_customer_review(st.session_state.authenticated_user, review)
+            except Exception as error:
+                st.error(f"Review submission failed: {error}")
+            else:
+                st.success(
+                    "Thank you for your review to The Grand Restaurant!",
+                    icon=":material/check_circle:",
+                )
+
+        render_recent_review_cards()
 
 
 def get_submitted_review_predictions(
@@ -522,11 +861,18 @@ def render_owner_dashboard(
     lemmatizer,
     stop_words,
 ):
-    render_page_header(
-        APP_TITLE,
-        "Customer feedback prepared for the restaurant owner.",
-        "storefront",
+    render_restaurant_review_styles()
+    render_restaurant_review_header("Restaurant owner")
+    render_restaurant_overview()
+
+    st.html(
+        """
+        <div class="rr-owner-heading">
+            <h3>Reviews</h3>
+        </div>
+        """,
     )
+
     with st.container(border=True):
         sentiment_filter = st.segmented_control(
             "Filter customer reviews by sentiment",
@@ -695,6 +1041,42 @@ def render_labelled_sentiment_tab(
         st.dataframe(filtered_df[preview_columns], hide_index=True)
 
 
+def render_confusion_matrix_tab(confusion_matrices, metrics_df):
+    best_model_name = metrics_df.loc[metrics_df["Accuracy"].idxmax(), "Model"]
+    model_names = list(confusion_matrices.keys())
+    selected_model_name = st.selectbox(
+        "Choose NLP model",
+        options=model_names,
+        index=model_names.index(best_model_name),
+        key="developer_confusion_matrix_model",
+    )
+    matrix_df = confusion_matrices[selected_model_name]
+
+    with st.container(border=True):
+        st.subheader(f"{selected_model_name} confusion matrix")
+        st.caption(
+            "Rows are actual sentiment labels from the test set. Columns are "
+            "the sentiment labels predicted by the selected model."
+        )
+        st.dataframe(
+            matrix_df,
+            column_config={
+                "Predicted Positive": st.column_config.NumberColumn(
+                    "Predicted Positive",
+                    width="medium",
+                ),
+                "Predicted Neutral": st.column_config.NumberColumn(
+                    "Predicted Neutral",
+                    width="medium",
+                ),
+                "Predicted Negative": st.column_config.NumberColumn(
+                    "Predicted Negative",
+                    width="medium",
+                ),
+            },
+        )
+
+
 def render_developer_dashboard(
     df,
     trained_models,
@@ -702,6 +1084,7 @@ def render_developer_dashboard(
     metrics_df,
     lemmatizer,
     stop_words,
+    confusion_matrices,
 ):
     render_page_header(
         "Developer tools",
@@ -709,10 +1092,11 @@ def render_developer_dashboard(
         "analytics",
     )
 
-    submitted_tab, labelled_tab = st.tabs(
+    submitted_tab, labelled_tab, confusion_matrix_tab = st.tabs(
         [
             "Customer review predictions",
             "Filter by labelled sentiment",
+            "Confusion matrix",
         ]
     )
 
@@ -731,6 +1115,12 @@ def render_developer_dashboard(
             metrics_df,
         )
 
+    with confusion_matrix_tab:
+        render_confusion_matrix_tab(
+            confusion_matrices,
+            metrics_df,
+        )
+
 
 initialize_session_state()
 ensure_storage_files()
@@ -743,11 +1133,17 @@ page = render_sidebar_navigation()
 
 try:
     with st.spinner("Preparing app..."):
-        df, lemmatizer, stop_words, trained_models, vectorizer, metrics_df = (
-            load_models(
-                POSITIVE_REVIEW_SAMPLE_SIZE,
-                TRAINING_DATASET_CACHE_VERSION,
-            )
+        (
+            df,
+            lemmatizer,
+            stop_words,
+            trained_models,
+            vectorizer,
+            metrics_df,
+            confusion_matrices,
+        ) = load_models(
+            POSITIVE_REVIEW_SAMPLE_SIZE,
+            TRAINING_DATASET_CACHE_VERSION,
         )
 except Exception as error:
     st.error(f"Could not load model: {error}")
@@ -777,4 +1173,5 @@ else:
         metrics_df,
         lemmatizer,
         stop_words,
+        confusion_matrices,
     )
