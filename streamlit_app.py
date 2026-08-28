@@ -308,7 +308,6 @@ def render_restaurant_review_header(role_label):
         f"""
         <div class="rr-page-header">
             <div>
-                <div class="rr-eyebrow">Restaurant review</div>
                 <h2>{escape(RESTAURANT_NAME)}</h2>
             </div>
             <div class="rr-role-pill">{escape(role_label)}</div>
