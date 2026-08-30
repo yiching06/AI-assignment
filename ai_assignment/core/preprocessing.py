@@ -10,6 +10,41 @@ from ai_assignment.core.constants import NLTK_DATA_DIR
 nltk.data.path.insert(0, str(NLTK_DATA_DIR))
 
 
+NEGATION_REPLACEMENTS = {
+    "can't": "can not",
+    "cannot": "can not",
+    "cant": "can not",
+    "couldn't": "could not",
+    "couldnt": "could not",
+    "didn't": "did not",
+    "didnt": "did not",
+    "doesn't": "does not",
+    "doesnt": "does not",
+    "don't": "do not",
+    "dont": "do not",
+    "hadn't": "had not",
+    "hadnt": "had not",
+    "hasn't": "has not",
+    "hasnt": "has not",
+    "haven't": "have not",
+    "havent": "have not",
+    "isn't": "is not",
+    "isnt": "is not",
+    "mustn't": "must not",
+    "mustnt": "must not",
+    "shouldn't": "should not",
+    "shouldnt": "should not",
+    "wasn't": "was not",
+    "wasnt": "was not",
+    "weren't": "were not",
+    "werent": "were not",
+    "won't": "will not",
+    "wont": "will not",
+    "wouldn't": "would not",
+    "wouldnt": "would not",
+}
+
+
 def ensure_nltk_data():
     NLTK_DATA_DIR.mkdir(exist_ok=True)
     packages = {
@@ -77,8 +112,16 @@ def build_stop_words():
     return stop_words
 
 
-def clean_review(text, lemmatizer, stop_words):
+def expand_negations(text):
     text = str(text).lower()
+    for original, replacement in NEGATION_REPLACEMENTS.items():
+        text = re.sub(rf"\b{re.escape(original)}\b", replacement, text)
+
+    return text
+
+
+def clean_review(text, lemmatizer, stop_words):
+    text = expand_negations(text)
     text = re.sub(r"[^a-z\s]", "", text)
     words = word_tokenize(text)
     cleaned_words = [
@@ -90,6 +133,6 @@ def clean_review(text, lemmatizer, stop_words):
 
 
 def normalize_short_response(text):
-    text = str(text).lower()
+    text = expand_negations(text)
     text = re.sub(r"[^a-z\s]", "", text)
     return re.sub(r"\s+", " ", text).strip()

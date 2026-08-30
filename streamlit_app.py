@@ -42,7 +42,7 @@ RESTAURANT_OWNER_PASSWORD_HASH = hashlib.sha256(
     "restaurantOwner123".encode("utf-8")
 ).hexdigest()
 TRAINING_DATASET_CACHE_VERSION = (
-    f"positive-cap-{POSITIVE_REVIEW_SAMPLE_SIZE}-macro-metrics-confusion-v1"
+    f"positive-cap-{POSITIVE_REVIEW_SAMPLE_SIZE}-macro-metrics-confusion-v3"
 )
 SENTIMENT_FILTER_OPTIONS = ["All", *SENTIMENT_LABELS]
 

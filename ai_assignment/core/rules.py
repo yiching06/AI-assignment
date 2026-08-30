@@ -15,6 +15,10 @@ from ai_assignment.core.lexicons import (
 from ai_assignment.core.preprocessing import normalize_short_response
 
 
+NEGATION_WORDS = {"not", "no", "never"}
+NEGATION_SCOPE_LIMIT = 3
+
+
 def is_neutral_short_response(text):
     normalized_text = normalize_short_response(text)
     compact_text = normalized_text.replace(" ", "")
@@ -36,14 +40,30 @@ def is_positive_short_response(text):
 def has_positive_keyword(text, cleaned_text):
     normalized_words = set(normalize_short_response(text).split())
     cleaned_words = set(cleaned_text.split())
+    positive_words = get_positive_cue_words().union(POSITIVE_SHORT_RESPONSES)
 
-    if normalized_words.intersection({"not", "no", "never"}):
+    if normalized_words.intersection(NEGATION_WORDS):
         return False
 
     if cleaned_words.intersection(STRONG_NEGATIVE_KEYWORDS):
         return False
 
-    return bool(cleaned_words.intersection(POSITIVE_SHORT_RESPONSES))
+    return bool(cleaned_words.intersection(positive_words))
+
+
+def has_negated_positive_cue(cleaned_text):
+    words = cleaned_text.split()
+    positive_words = get_positive_cue_words().union(POSITIVE_SHORT_RESPONSES)
+
+    for index, word in enumerate(words):
+        if word not in NEGATION_WORDS:
+            continue
+
+        nearby_words = words[index + 1 : index + 1 + NEGATION_SCOPE_LIMIT]
+        if set(nearby_words).intersection(positive_words):
+            return True
+
+    return False
 
 
 def is_neutral_review(text, cleaned_text):
@@ -99,6 +119,9 @@ def is_negative_review(text, cleaned_text):
     cleaned_words = set(cleaned_text.split())
 
     if any(phrase in normalized_text for phrase in get_negative_cue_phrases()):
+        return True
+
+    if has_negated_positive_cue(cleaned_text):
         return True
 
     return bool(cleaned_words.intersection(STRONG_NEGATIVE_KEYWORDS))

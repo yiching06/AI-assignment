@@ -53,7 +53,7 @@ MIXED_SENTIMENT_CONNECTORS = {
     "yet",
 }
 
-NEUTRAL_SHORT_RESPONSES = {"ok", "okay", "okok"}
+NEUTRAL_SHORT_RESPONSES = {"ok", "okay", "okok", "soso"}
 NEUTRAL_KEYWORDS = {
     "average",
     "acceptable",
@@ -116,6 +116,10 @@ NEUTRAL_TRAINING_EXAMPLES = [
     "nothing special",
     "nothing remarkable",
     "ordinary dining experience",
+    "not bad",
+    "not so great",
     "not bad not great",
+    "soso",
+    "so so",
 ]
 NEUTRAL_EXAMPLE_WEIGHT = 20
