@@ -40,7 +40,6 @@ def is_positive_short_response(text):
 def has_positive_keyword(text, cleaned_text):
     normalized_words = set(normalize_short_response(text).split())
     cleaned_words = set(cleaned_text.split())
-    positive_words = get_positive_cue_words().union(POSITIVE_SHORT_RESPONSES)
 
     if normalized_words.intersection(NEGATION_WORDS):
         return False
@@ -48,7 +47,17 @@ def has_positive_keyword(text, cleaned_text):
     if cleaned_words.intersection(STRONG_NEGATIVE_KEYWORDS):
         return False
 
-    return bool(cleaned_words.intersection(positive_words))
+    return has_positive_cue(cleaned_words)
+
+
+def has_positive_cue(words):
+    positive_words = get_positive_cue_words().union(POSITIVE_SHORT_RESPONSES)
+    return bool(set(words).intersection(positive_words))
+
+
+def has_negative_cue(words):
+    negative_words = get_negative_cue_words().union(STRONG_NEGATIVE_KEYWORDS)
+    return bool(set(words).intersection(negative_words))
 
 
 def has_negated_positive_cue(cleaned_text):
@@ -94,13 +103,48 @@ def has_mixed_sentiment(text, cleaned_text):
     if not has_connector:
         return False
 
-    has_positive_cue = bool(cleaned_words.intersection(get_positive_cue_words()))
-    has_negative_cue = (
-        bool(cleaned_words.intersection(get_negative_cue_words()))
-        or any(phrase in normalized_text for phrase in get_negative_cue_phrases())
-    )
+    if any(phrase in normalized_text for phrase in get_negative_cue_phrases()):
+        return has_positive_cue(cleaned_words)
 
-    return has_positive_cue and has_negative_cue
+    return has_connector_followed_by_negation(cleaned_text)
+
+
+def has_connector_followed_by_negation(cleaned_text):
+    words = cleaned_text.split()
+
+    for index, word in enumerate(words):
+        if word not in MIXED_SENTIMENT_CONNECTORS:
+            continue
+
+        words_before_connector = words[:index]
+        words_after_connector = words[index + 1 :]
+
+        before_is_positive = has_positive_cue(words_before_connector)
+        after_is_positive = has_positive_cue(words_after_connector)
+        before_is_negative = has_negative_clause(words_before_connector)
+        after_is_negative = has_negative_clause(words_after_connector)
+
+        if before_is_positive and after_is_negative:
+            return True
+
+        if before_is_negative and after_is_positive:
+            return True
+
+    return False
+
+
+def has_negative_clause(words):
+    clause_text = " ".join(words)
+    if any(phrase in clause_text for phrase in get_positive_phrases()):
+        return False
+
+    if has_negative_cue(words):
+        return True
+
+    if has_negated_positive_cue(clause_text):
+        return True
+
+    return bool(set(words).intersection(NEGATION_WORDS))
 
 
 def is_positive_review(text, cleaned_text):
