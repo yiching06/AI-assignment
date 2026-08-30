@@ -564,7 +564,7 @@ def render_authentication():
 
     render_page_header(
         APP_TITLE,
-        "A polished place for guest feedback, owner review, and sentiment analysis.",
+        "",
         "reviews",
     )
 
@@ -1094,7 +1094,7 @@ def render_developer_dashboard(
     submitted_tab, labelled_tab, confusion_matrix_tab = st.tabs(
         [
             "Customer review predictions",
-            "Filter by labelled sentiment",
+            "Sentiment Analysis Metrics",
             "Confusion matrix",
         ]
     )
